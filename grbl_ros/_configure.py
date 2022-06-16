@@ -42,6 +42,7 @@ class configure(object):
 
     def clearAlarm(self):
         """Clear the alarm on the GRBL machine."""
+        print('Clearing alarm...')
         response = self.send(str('$X'))
         response += ', ' + self.send(str('?'))
         return response
@@ -62,6 +63,7 @@ class configure(object):
         self.s.write(b'!')
         self.s.flush()
         time.sleep(1)
+        self.s.write(b'\030')
         response = self.send(str('#'))
         self.s.write(b'$G\n')
         response += ', ' + self.send(str('$G'))
