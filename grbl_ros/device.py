@@ -94,7 +94,7 @@ class grbl_node(Node):
         self.srv_flush_ = self.create_service(
             Flush, self.machine_id + '/flush', self.flushCallback)
         self.srv_cancel_ = self.create_service(
-            Flush, self.machine_id + '/cancel', self.cancelCallback)
+            Cancel, self.machine_id + '/cancel', self.cancelCallback)
         # Initialize Actions
         self.action_done_event = Event()
         self.callback_group = ReentrantCallbackGroup()
