@@ -56,20 +56,27 @@ class configure(object):
         time.sleep(1)
         self.s.write(b'\030')
         response = self.send(str('$X'))
-        response &= self.send(str('$G'))
+        response += ', ' + self.send(str('$G'))
+        response += ', ' + self.send(str('?'))
         return response
 
     def enableSteppers(self):
         """Enable the motors on the GRBL machine."""
-        return self.send(str('M17'))
+        response = self.send(str('M17'))
+        response += ', ' + self.send(str('?'))
+        return response
 
     def feedHold(self):
         """Feed hold the GRBL machine."""
-        return self.send(str(r'!'))
+        response = self.send(str(r'!'))
+        response += ', ' + self.send(str('?'))
+        return response
 
     def disableSteppers(self):
         """Disable the motors on the GRBL machine."""
-        return self.send(str('M17'))
+        response = self.send(str('M17'))
+        response += ', ' + self.send(str('?'))
+        return response
 
     def ensureMovementMode(self, absoluteMode=True):
         """Set movement to desired form."""
