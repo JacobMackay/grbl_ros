@@ -49,13 +49,25 @@ class configure(object):
     def flushStop(self):
         """Stop active command, flush and clear alarm."""
         # Don't know if 100% correct, but it seems to work.
-        # Inspired by bcnc _GenericController.py:line 176
+        # Inspired by bcnc bCNC/bCNC/controllers/_GenericController.py:line 176
         # (def purgeController(self):)
+        # self.s.write(b'!')
+        # self.s.flush()
+        # time.sleep(1)
+        # self.s.write(b'\030')
+        # response = self.send(str('$X'))
+        # # response += ', ' + self.send(str('$G'))
+        # response += ', ' + self.send(str('?'))
+        # What bcnc does?
         self.s.write(b'!')
         self.s.flush()
         time.sleep(1)
-        self.s.write(b'\030')
-        response = self.send(str('$X'))
+        response = self.send(str('#'))
+        self.s.write(b'$G\n')
+        response += ', ' + self.send(str('$G'))
+        response += ', ' + self.send(str('$X'))
+        response += ', ' + self.send(str('G0 G54 G17 G21 G90 G94'))
+        response += ', ' + self.send(str('G43.1Z0.000'))
         response += ', ' + self.send(str('$G'))
         response += ', ' + self.send(str('?'))
         return response
