@@ -25,12 +25,12 @@ from geometry_msgs.msg import Pose
 
 from grbl_msgs.action import SendGcodeCmd, SendGcodeFile
 from grbl_msgs.msg import State
-from grbl_msgs.srv import Flush, Home, Stop, Unlock, Cancel
+from grbl_msgs.srv import Cancel, Flush, Home, Stop, Unlock
 
 from grbl_ros import grbl
 
 import rclpy
-from rclpy.action import ActionClient, ActionServer
+from rclpy.action import ActionClient, ActionServer, CancelResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -107,7 +107,8 @@ class grbl_node(Node):
                 self,
                 SendGcodeFile,
                 self.machine_id + '/send_gcode_file',
-                self.streamCallback)
+                self.streamCallback,
+                cancel_callback=self.streamCancelCallback)
         self.action_client_send_gcode_ = ActionClient(
                 self,
                 SendGcodeCmd,
@@ -262,6 +263,9 @@ class grbl_node(Node):
         goal_handle.succeed()
         result.success = True
         return result
+
+    def streamCancelCallback(self, cancel_request):
+        return CancelResponse.ACCEPT
 
     def file_feedback(self, feedback):
         """
