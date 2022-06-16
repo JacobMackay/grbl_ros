@@ -29,4 +29,6 @@ class control(object):
 
     def home(self):
         """Home the GRBL device."""
-        self.send(self, '$H')
+        result = self.send(str('$H'))
+        result += ', ' + self.send(str('?'))
+        return result

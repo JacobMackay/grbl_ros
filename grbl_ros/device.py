@@ -1,3 +1,4 @@
+"""Evan Flynn's grbl ros. Modified by Jacob Mackay."""
 # Copyright 2020 Evan Flynn
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -17,19 +18,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-from threading import Event
 import time
+from threading import Event
 
 from geometry_msgs.msg import Pose
 
 from grbl_msgs.action import SendGcodeCmd, SendGcodeFile
 from grbl_msgs.msg import State
-from grbl_msgs.srv import Stop
+from grbl_msgs.srv import Flush, Home, Stop, Unlock
+
 from grbl_ros import grbl
 
 import rclpy
 from rclpy.action import ActionClient, ActionServer
-
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -41,13 +42,14 @@ class grbl_node(Node):
     """
     A ROS2 node representing a single GRBL device.
 
-    This nodes main function is to publish the real-time pose of the GRBL device as
-    a ROS2 transform (tf).  Additionally it enables the ROS2 user to send GCODE commands
-    and files to the GRBL device and monitor its status.
+    This nodes main function is to publish the real-time pose of the GRBL
+    device as a ROS2 transform (tf). Additionally it enables the ROS2 user to
+    send GCODE commands and files to the GRBL device and monitor its status.
 
     """
 
     def __init__(self):
+        """Initialise the grbl machine."""
         # TODO(evanflynn): init node with machine_id param input or arg
         super().__init__('grbl_device')
 
@@ -71,16 +73,26 @@ class grbl_node(Node):
                 ('z_steps', 100),  # mm
             ])
 
-        self.machine_id = self.get_parameter('machine_id').get_parameter_value().string_value
+        self.machine_id = self.get_parameter(
+            'machine_id').get_parameter_value().string_value
         self.get_logger().info('Initializing Publishers & Subscribers')
         # Initialize Publishers
         self.pub_tf_ = TransformBroadcaster(self)
-        self.pub_mpos_ = self.create_publisher(Pose, self.machine_id + '/machine_position', 5)
-        self.pub_wpos_ = self.create_publisher(Pose, self.machine_id + '/work_position', 5)
-        self.pub_state_ = self.create_publisher(State, self.machine_id + '/state', 5)
+        self.pub_mpos_ = self.create_publisher(
+            Pose, self.machine_id + '/machine_position', 5)
+        self.pub_wpos_ = self.create_publisher(
+            Pose, self.machine_id + '/work_position', 5)
+        self.pub_state_ = self.create_publisher(
+            State, self.machine_id + '/state', 5)
         # Initialize Services
         self.srv_stop_ = self.create_service(
             Stop, self.machine_id + '/stop', self.stopCallback)
+        self.srv_home_ = self.create_service(
+            Home, self.machine_id + '/home', self.homeCallback)
+        self.srv_unlock_ = self.create_service(
+            Unlock, self.machine_id + '/unlock', self.unlockCallback)
+        self.srv_flush_ = self.create_service(
+            Flush, self.machine_id + '/flush', self.flushCallback)
         # Initialize Actions
         self.action_done_event = Event()
         self.callback_group = ReentrantCallbackGroup()
@@ -97,14 +109,16 @@ class grbl_node(Node):
         self.action_client_send_gcode_ = ActionClient(
                 self,
                 SendGcodeCmd,
-                self.machine_id + '/send_gcode_cmd', callback_group=self.callback_group)
+                self.machine_id + '/send_gcode_cmd',
+                callback_group=self.callback_group)
 
         self.action_done_event = Event()
 
         self.get_logger().info('Getting ROS parameters')
         port = self.get_parameter('port')
         baud = self.get_parameter('baudrate')
-        acc = self.get_parameter('acceleration')    # axis acceleration (mm/s^2)
+        # axis acceleration (mm/s^2)
+        acc = self.get_parameter('acceleration')
         max_x = self.get_parameter('x_max')           # workable travel (mm)
         max_y = self.get_parameter('y_max')           # workable travel (mm)
         max_z = self.get_parameter('x_max')           # workable travel (mm)
@@ -117,8 +131,10 @@ class grbl_node(Node):
         steps_z = self.get_parameter('z_steps')      # axis steps per mm
 
         self.get_logger().warn('  machine_id: ' + str(self.machine_id))
-        self.get_logger().warn('  port:       ' + str(port.get_parameter_value().string_value))
-        self.get_logger().warn('  baudrate:   ' + str(baud.get_parameter_value().integer_value))
+        self.get_logger().warn('  port:       '
+                               + str(port.get_parameter_value().string_value))
+        self.get_logger().warn('  baudrate:   '
+                               + str(baud.get_parameter_value().integer_value))
 
         self.get_logger().info('Initializing GRBL Device')
         self.machine = grbl(self)
@@ -140,6 +156,7 @@ class grbl_node(Node):
         if(self.machine.s):
             self.machine.getStatus()
             self.machine.getSettings()
+            self.machine.clearAlarm()
         else:
             self.get_logger().warn('Could not detect GRBL device '
                                    'on serial port ' + self.machine.port)
@@ -148,27 +165,23 @@ class grbl_node(Node):
             self.get_logger().warn(
                 '[ TIP ] Change the serial port and machine ID parameters')
             self.get_logger().warn(
-                '[ TIP ] in the `grbl_ros/config` yaml file and use it at run-time:')
+                '[ TIP ] in the `grbl_ros/config` yaml file'
+                + 'and use it at run-time:')
             self.get_logger().warn(
                 '[ TIP ]   ros2 run grbl_ros grbl_node '
                 '--ros-args --params-file <path/to/config>.yaml')
             # TODO(evanflynn): set this to a different color so it stands out?
             self.get_logger().info('Node running in `debug` mode')
-            self.get_logger().info('GRBL device operation may not function as expected')
+            self.get_logger().info(
+                'GRBL device operation may not function as expected')
             self.machine.mode = self.machine.MODE.DEBUG
-
-    def poseCallback(self, request, response):
-        self.machine.moveTo(request.position.x,
-                            request.position.y,
-                            request.position.z,
-                            blockUntilComplete=True)
-        return response
 
     def gcodeCallback(self, goal_handle):
         """
         Send GCODE ROS2 action callback.
 
-        This is the callback called each time the ROS2 send_gcode_cmd action is called.
+        This is the callback called each time the ROS2 send_gcode_cmd action is
+        called.
 
         """
         result = SendGcodeCmd.Result()
@@ -190,7 +203,8 @@ class grbl_node(Node):
                     # poll status, publish position
                     time.sleep(0.01)
                     self.machine.send(str('?'))
-                    status_msg.status = 'Running ' + str(goal_handle.request.command)
+                    status_msg.status = 'Running ' + \
+                        str(goal_handle.request.command)
                     goal_handle.publish_feedback(status_msg)
             # elif(self.machine.state.name.upper() == self.machine.STATE.ALARM.name):
                 # machine alarm is still active
@@ -207,7 +221,8 @@ class grbl_node(Node):
         """
         Send GCODE file ROS2 action callback.
 
-        This is the callback called each time the ROS2 send_gcode_file action is called
+        This is the callback called each time the ROS2 send_gcode_file action
+        is called
         and calls the send_gcode_cmd action for each line in the given file.
 
         """
@@ -218,7 +233,8 @@ class grbl_node(Node):
         self.action_client_send_gcode_.wait_for_server()
         gcode_msg = SendGcodeCmd.Goal()
 
-        file_length = len(open(goal_handle.request.file_path, 'r').read().split('\n'))
+        file_length = len(
+            open(goal_handle.request.file_path, 'r').read().split('\n'))
         line_num = 0
 
         for raw_line in f:
@@ -249,7 +265,8 @@ class grbl_node(Node):
         """
         Feedback function during the send_gcode_file ROS2 aciton.
 
-        This feedback callback can be called during the send_gcode_file in order to provide
+        This feedback callback can be called during the send_gcode_file in
+        order to provide
         feedback to the user as the ROS2 action is executed.
 
         """
@@ -267,10 +284,41 @@ class grbl_node(Node):
     def stopCallback(self, request, response):
         # stop steppers
         if request.data == 's':
-            self.machine.disableSteppers()
-            # fire steppers
+            response.success = self.machine.disableSteppers()
+        # fire steppers
         elif request.data == 'f':
-            self.machine.enableSteppers()
+            response.success = self.machine.enableSteppers()
+        return response
+
+    def homeCallback(self, request, response):
+        """Get the home service callback."""
+        self.get_logger().info('Homing...')
+        response.message = self.machine.home()
+        if 'ok' in response.message:
+            response.success = True
+        else:
+            response.success = False
+        return response
+
+    def unlockCallback(self, request, response):
+        """Unlock the grbl machine."""
+        self.get_logger().info('Unlocking...')
+        response.message = self.machine.clearAlarm()
+        if 'ok' in response.message:
+            response.success = True
+        else:
+            response.success = False
+        return response
+
+    def flushCallback(self, request, response):
+        """Stop and fluch the grbl machine. Emulate bcnc STOP."""
+        self.get_logger().info('Stopping and flushing...')
+        response.message = self.machine.flushStop()
+        if 'ok' in response.message:
+            response.success = True
+        else:
+            response.success = False
+        return response
 
 
 def main(args=None):

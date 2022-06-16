@@ -22,15 +22,18 @@ Functions to configure the GRBL device.
 
 The grbl device configure functions
 """
+import time
 
 
 class configure(object):
-    """Configure class to hold all configure functions for the grbl device class."""
+    """Configure class to hold all configure functions for the grbl device."""
 
     def setSpeed(self, speed):
+        """Set the default machine speed."""
         self.defaultSpeed = speed
 
     def setOrigin(self, x=0, y=0, z=0):
+        """Set the machine origin."""
         # set current position to be (0,0,0), or a custom (x,y,z)
         gcode = 'G92 x{} y{} z{}\n'.format(x, y, z)
         self.send(self, gcode)
@@ -39,21 +42,35 @@ class configure(object):
 
     def clearAlarm(self):
         """Clear the alarm on the GRBL machine."""
-        return self.send(self, r'\$X')
+        return self.send('$X')
+
+    def flushStop(self):
+        """Stop active command, flush and clear alarm."""
+        # Don't know if 100% correct, but it seems to work.
+        # Inspired by bcnc _GenericController.py:line 176
+        # (def purgeController(self):)
+        self.s.write(b'!')
+        self.s.flush()
+        time.sleep(1)
+        self.s.write(b'\030')
+        response = self.send('$X')
+        response &= self.send('$G')
+        return response
 
     def enableSteppers(self):
         """Enable the motors on the GRBL machine."""
-        return self.send(self, 'M17')
+        return self.send('M17')
 
     def feedHold(self):
         """Feed hold the GRBL machine."""
-        return self.send(self, r'\!')
+        return self.send(r'!')
 
     def disableSteppers(self):
         """Disable the motors on the GRBL machine."""
-        return self.send(self, 'M17')
+        return self.send('M17')
 
     def ensureMovementMode(self, absoluteMode=True):
+        """Set movement to desired form."""
         # GRBL has two movement modes
         # if necessary this function tells GRBL to switch modes
         if self.abs_move == absoluteMode:
