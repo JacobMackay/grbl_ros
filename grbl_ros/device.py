@@ -308,18 +308,20 @@ class grbl_node(Node):
             response.success = True
             print('success1' + response.message)
         else:
-            self.get_logger().info('Stopping and flushing...')
-            response.message = self.machine.flushStop()
-            print('fail1a' + response.message)
-            self.get_logger().info('Unlocking...')
-            response.message = self.machine.clearAlarm()
-            print('fail1b' + response.message)
-            if 'ok' in response.message:
-                response.success = True
-                print('success2' + response.message)
-            else:
-                response.success = False
-                print('fail2' + response.message)
+            # self.get_logger().info('Stopping and flushing...')
+            # response.message = self.machine.flushStop()
+            # print('fail1a' + response.message)
+            # self.get_logger().info('Unlocking...')
+            # response.message = self.machine.clearAlarm()
+            # print('fail1b' + response.message)
+            # if 'ok' in response.message:
+            #     response.success = True
+            #     print('success2' + response.message)
+            # else:
+            #     response.success = False
+            #     print('fail2' + response.message)
+            response.success = False
+            print('fail2' + response.message)
         self.send(str('?'))
         return response
 
