@@ -91,13 +91,16 @@ class configure(object):
         self.s.flush()
         time.sleep(1)
         self.s.write(b'\030')
-        response = self.send(str('#'))
-        self.s.write(b'$G\n')
-        response += ', ' + self.send(str('$G'))
-        response += ', ' + self.send(str('$X'))
-        response += ', ' + self.send(str('G0 G54 G17 G21 G90 G94'))
-        # response += ', ' + self.send(str('G43.1Z0.000')) # Restore state?
-        response += ', ' + self.send(str('$G'))
+        # response = self.send(str('#'))
+        # self.s.write(b'$G\n')
+        # response += ', ' + self.send(str('$G'))
+        # response += ', ' + self.send(str('$X'))
+        # response += ', ' + self.send(str('G0 G54 G17 G21 G90 G94'))
+        # # Restore tooling offset.
+        # response += ', ' + self.send(str('G43.1Z0.000'))
+        # response += ', ' + self.send(str('$G'))
+        # response += ', ' + self.send(str('?'))
+        response = []
         response += ', ' + self.send(str('?'))
         return response
 
