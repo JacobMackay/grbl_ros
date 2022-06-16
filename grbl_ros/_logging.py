@@ -36,7 +36,7 @@ class logging(object):
         # TODO(evanflynn): status should be ROS msg?
         if(self.mode == self.MODE.NORMAL):
             # ? returns the active GRBL state & current machine and work positions
-            return self.send('?')
+            return self.send(str('?'))
         elif(self.mode == self.MODE.DEBUG):
             return 'DEBUG GRBL device is happy!'
         else:
@@ -47,7 +47,7 @@ class logging(object):
         # TODO(evanflynn): status should be ROS msg?
         if(self.mode == self.MODE.NORMAL):
             # ? returns the active GRBL state & current machine and work positions
-            return self.send('$$')
+            return self.send(str('$$'))
         elif(self.mode == self.MODE.DEBUG):
             return 'DEBUG GRBL device is happy!'
         else:
