@@ -241,6 +241,13 @@ class grbl_node(Node):
         line_num = 0
 
         for raw_line in f:
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                self.get_logger().info('Goal canceled')
+                f.close()
+                result.success = True
+                return result
+
             self.action_done_event.clear()
             line = raw_line.strip()  # strip all EOL characters for consistency
             gcode_msg.command = line
@@ -260,6 +267,7 @@ class grbl_node(Node):
             goal_handle.publish_feedback(status_msg)
             line_num += 1
 
+        f.close()
         goal_handle.succeed()
         result.success = True
         return result
