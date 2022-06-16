@@ -25,7 +25,7 @@ from geometry_msgs.msg import Pose
 
 from grbl_msgs.action import SendGcodeCmd, SendGcodeFile
 from grbl_msgs.msg import State
-from grbl_msgs.srv import Flush, Home, Stop, Unlock
+from grbl_msgs.srv import Flush, Home, Stop, Unlock, Cancel
 
 from grbl_ros import grbl
 
@@ -93,6 +93,8 @@ class grbl_node(Node):
             Unlock, self.machine_id + '/unlock', self.unlockCallback)
         self.srv_flush_ = self.create_service(
             Flush, self.machine_id + '/flush', self.flushCallback)
+        self.srv_cancel_ = self.create_service(
+            Flush, self.machine_id + '/cancel', self.cancelCallback)
         # Initialize Actions
         self.action_done_event = Event()
         self.callback_group = ReentrantCallbackGroup()
@@ -314,6 +316,16 @@ class grbl_node(Node):
         """Stop and fluch the grbl machine. Emulate bcnc STOP."""
         self.get_logger().info('Stopping and flushing...')
         response.message = self.machine.flushStop()
+        if 'ok' in response.message:
+            response.success = True
+        else:
+            response.success = False
+        return response
+
+    def cancelCallback(self, request, response):
+        """Stop the current commands."""
+        self.get_logger().info('Cancelling...')
+        response.message = self.machine.Cancel()
         if 'ok' in response.message:
             response.success = True
         else:
