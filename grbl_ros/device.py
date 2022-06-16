@@ -307,7 +307,14 @@ class grbl_node(Node):
         if 'ok' in response.message:
             response.success = True
         else:
-            response.success = False
+            self.get_logger().info('Stopping and flushing...')
+            response.message = self.machine.flushStop()
+            self.get_logger().info('Unlocking...')
+            response.message = self.machine.clearAlarm()
+            if 'ok' in response.message:
+                response.success = True
+            else:
+                response.success = False
         return response
 
     def flushCallback(self, request, response):

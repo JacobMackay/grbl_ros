@@ -42,8 +42,7 @@ class configure(object):
 
     def clearAlarm(self):
         """Clear the alarm on the GRBL machine."""
-        response = self.send(str('$X'))
-        return response
+        return self.send(str('$X'))
 
     def flushStop(self):
         """Stop active command, flush and clear alarm."""
@@ -54,21 +53,21 @@ class configure(object):
         self.s.flush()
         time.sleep(1)
         self.s.write(b'\030')
-        response = self.send('$X')
-        response &= self.send('$G')
+        response = self.send(str('$X'))
+        response &= self.send(str('$G'))
         return response
 
     def enableSteppers(self):
         """Enable the motors on the GRBL machine."""
-        return self.send('M17')
+        return self.send(str('M17'))
 
     def feedHold(self):
         """Feed hold the GRBL machine."""
-        return self.send(r'!')
+        return self.send(str(r'!'))
 
     def disableSteppers(self):
         """Disable the motors on the GRBL machine."""
-        return self.send('M17')
+        return self.send(str('M17'))
 
     def ensureMovementMode(self, absoluteMode=True):
         """Set movement to desired form."""
