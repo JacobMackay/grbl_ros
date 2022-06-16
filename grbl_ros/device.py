@@ -322,7 +322,7 @@ class grbl_node(Node):
             #     print('fail2' + response.message)
             response.success = False
             # print('fail2' + response.message)
-        self.send(str('?'))
+        # self.send(str('?'))
         return response
 
     def flushCallback(self, request, response):

@@ -43,6 +43,7 @@ class configure(object):
     def clearAlarm(self):
         """Clear the alarm on the GRBL machine."""
         response = self.send(str('$X'))
+        result += ', ' + self.send(str('?'))
         return response
 
     def flushStop(self):
